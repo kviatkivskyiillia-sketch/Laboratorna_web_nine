@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="Author" lang="uk" content="Квятківський Ілля Юрійович">
+    <meta name="Description" content="Медіабібліотека: audio та video">
+    <meta name="Keywords" content="Web - сторінка, audio, video, форми">
+    <title>Лабораторна робота №9</title>
+</head>
+<body>
+    <h1>Медіабібліотека</h1>
+    <p class="lead">Оберіть тип, композицію або відео та налаштуйте відтворення</p>
+
+    <form id="menu" onsubmit="return false;">
+        <fieldset>
+            <legend>Вибір медіа</legend>
+            <p>
+                <input type="radio" id="t_audio" name="type" value="audio" checked>
+                <label for="t_audio">Аудіо</label>
+                <input type="radio" id="t_video" name="type" value="video">
+                <label for="t_video">Відео</label>
+            </p>
+            <p>
+                <label for="list">Назва</label><br>
+                <select id="list" name="list" style="width: 320px;"></select>
+            </p>
+            <p>
+                <label for="find">Пошук у бібліотеці</label><br>
+                <input type="search" id="find" name="find" list="titles" size="30" placeholder="Введіть назву">
+                <datalist id="titles"></datalist>
+                <button type="button" id="btnFind">Знайти</button>
+            </p>
+        </fieldset>
+
+        <fieldset>
+            <legend>Налаштування відтворення</legend>
+            <p>
+                <label for="vol">Гучність</label>
+                <input type="range" id="vol" min="0" max="1" step="0.05" value="0.8">
+                <output id="volOut">80%</output>
+            </p>
+            <p>
+                <label for="speed">Швидкість (0.5 – 2)</label>
+                <input type="number" id="speed" min="0.5" max="2" step="0.25" value="1" style="width: 70px;">
+            </p>
+            <p>
+                <input type="checkbox" id="loop"> <label for="loop">Повторювати</label>
+                <input type="checkbox" id="auto" checked> <label for="auto">Автозапуск</label>
+            </p>
+            <p>
+                <button type="button" id="btnPlay">Грати</button>
+                <button type="button" id="btnPause">Пауза</button>
+                <button type="button" id="btnCheck">Перевірити підтримку відео</button>
+                <span id="checkResult"></span>
+            </p>
+        </fieldset>
+    </form>
+
+    <p>Зараз: <span id="nowPlaying">—</span></p>
+    <progress id="prog" class="bar" value="0" max="100">0%</progress>
+
+    <div class="player">
+        <h3>Аудіо</h3>
+        <audio id="myAudio" controls>
+            <source src="audio/track1.mp3" type="audio/mpeg">
+            Тег audio не підтримується вашим браузером.
+        </audio>
+    </div>
+
+    <div class="player">
+        <h3>Відео</h3>
+        <video id="myVideo" controls tabindex="0" poster="video/poster.jpg">
+            <source src="video/video1.mp4" type='video/mp4; codecs="avc1.42E01E, mp4a.40.2"'>
+            <source src="video/video1.webm" type='video/webm; codecs="vp8, vorbis"'>
+            Тег video не підтримується вашим браузером. <a href="video/video1.mp4">Завантажити відео</a>.
+        </video>
+    </div>
+
+    <script>
+        var library = {
+            audio: [
+                { group: "Рок",  title: "Пісня 1", file: "track1.mp3" },
+                { group: "Рок",  title: "Пісня 2", file: "track2.mp3" },
+                { group: "Поп",  title: "Пісня 3", file: "track3.mp3" },
+                { group: "Поп",  title: "Пісня 4", file: "track4.mp3" }
+            ],
+            video: [
+                { group: "Музика", title: "Відео 1", file: "video1.mp4" },
+                { group: "Музика", title: "Відео 2", file: "video2.mp4" },
+                { group: "Harry Potter",  title: "Відео 3", file: "video3.mp4" }
+            ]
+        };
+
+        var audio = document.getElementById("myAudio");
+        var video = document.getElementById("myVideo");
+        var list = document.getElementById("list");
+        var titles = document.getElementById("titles");
+        var prog = document.getElementById("prog");
+
+        function currentType() {
+            return document.querySelector('input[name="type"]:checked').value;
+        }
+        function currentPlayer() { return currentType() === "audio" ? audio : video; }
+
+        function fillList() {
+            var type = currentType(), groups = {};
+            list.innerHTML = "";
+            titles.innerHTML = "";
+            library[type].forEach(function (item, i) {
+                if (!groups[item.group]) {
+                    groups[item.group] = document.createElement("optgroup");
+                    groups[item.group].label = item.group;
+                    list.appendChild(groups[item.group]);
+                }
+                var o = document.createElement("option");
+                o.value = i;
+                o.textContent = item.title;
+                groups[item.group].appendChild(o);
+
+                var d = document.createElement("option");
+                d.value = item.title;
+                titles.appendChild(d);
+            });
+        }
+
+        function applySettings(p) {
+            p.volume = parseFloat(document.getElementById("vol").value);
+            p.playbackRate = parseFloat(document.getElementById("speed").value) || 1;
+            p.loop = document.getElementById("loop").checked;
+        }
+
+        function loadSelected() {
+            var type = currentType();
+            var item = library[type][list.value];
+            if (!item) return;
+            var p = currentPlayer(), other = (p === audio) ? video : audio;
+            other.pause();
+            p.src = type + "/" + item.file;
+            applySettings(p);
+            document.getElementById("nowPlaying").textContent = item.title + " (" + (type === "audio" ? "аудіо" : "відео") + ")";
+            if (document.getElementById("auto").checked) p.play();
+        }
+
+        document.querySelectorAll('input[name="type"]').forEach(function (r) {
+            r.addEventListener("change", function () { fillList(); loadSelected(); });
+        });
+        list.addEventListener("change", loadSelected);
+
+        document.getElementById("btnFind").addEventListener("click", function () {
+            var q = document.getElementById("find").value.trim().toLowerCase();
+            var items = library[currentType()];
+            for (var i = 0; i < items.length; i++) {
+                if (items[i].title.toLowerCase().indexOf(q) !== -1) {
+                    list.value = i;
+                    loadSelected();
+                    return;
+                }
+            }
+            alert("Нічого не знайдено");
+        });
+
+        document.getElementById("vol").addEventListener("input", function () {
+            document.getElementById("volOut").textContent = Math.round(this.value * 100) + "%";
+            currentPlayer().volume = parseFloat(this.value);
+        });
+        document.getElementById("speed").addEventListener("change", function () {
+            currentPlayer().playbackRate = parseFloat(this.value) || 1;
+        });
+        document.getElementById("loop").addEventListener("change", function () {
+            currentPlayer().loop = this.checked;
+        });
+        document.getElementById("btnPlay").addEventListener("click", function () {
+            var p = currentPlayer(), other = (p === audio) ? video : audio;
+            other.pause(); applySettings(p); p.play();
+        });
+        document.getElementById("btnPause").addEventListener("click", function () {
+            audio.pause(); video.pause();
+        });
+
+        [audio, video].forEach(function (p) {
+            p.addEventListener("timeupdate", function () {
+                if (p.duration) prog.value = (p.currentTime / p.duration) * 100;
+            });
+        });
+
+        document.getElementById("btnCheck").addEventListener("click", function () {
+            var res = document.getElementById("checkResult");
+            var v = document.createElement("video");
+            if (!v.canPlayType) { res.textContent = "Вибачте. Не підтримує."; return; }
+            var ogg = v.canPlayType('video/ogg; codecs="theora, vorbis"');
+            var mp4 = v.canPlayType('video/mp4; codecs="avc1.42E01E, mp4a.40.2"');
+            var best = (ogg === "probably" || mp4 === "probably") ? "Так!" :
+                       (ogg || mp4) ? "Частково підтримує." : "Вибачте. Не підтримує.";
+            res.textContent = best;
+        });
+
+        fillList();
+    </script>
+</body>
+</html>
